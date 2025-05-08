@@ -1,6 +1,8 @@
 #include <windows.h>
-#include <cstdint>
-#include <cstdio>
+#include <stdint.h>
+#include <stdio.h>
+#include <d3d9.h>
+#include <ShlObj.h> // Include for SHGetKnownFolderPath
 
 LONG WINAPI
 VectoredHandler1(
@@ -51,9 +53,32 @@ FI;
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
-BOOL WINAPI DllMain(HMODULE mod, DWORD reason, LPVOID reserved) {
+
+BOOL WINAPI DllMain(HMODULE module, DWORD reason, LPVOID reserved) {
     if (reason == DLL_PROCESS_ATTACH) {
+        DisableThreadLibraryCalls(module);
+        TCHAR module_path[MAX_PATH];
+        if (GetModuleFileName(module, module_path, MAX_PATH)) {
+            LoadLibrary(module_path);
+        }        
         AddVectoredExceptionHandler(1, VectoredHandler1);
     }
     return TRUE;
+}
+
+using Direct3DCreate9_t = decltype(&Direct3DCreate9);
+extern "C" auto WINAPI export_Direct3DCreate9(UINT SDKVersion) -> IDirect3D9* {
+    HMODULE d3d9;
+    PWSTR system32_path = nullptr;
+    HRESULT hr = SHGetKnownFolderPath(FOLDERID_System, 0, NULL, &system32_path);
+    if (SUCCEEDED(hr)) {
+        char d3d9_path[MAX_PATH];
+        sprintf(d3d9_path, "%S\\d3d9.dll", system32_path);
+        d3d9 = LoadLibraryEx(d3d9_path, 0, LOAD_WITH_ALTERED_SEARCH_PATH);
+        CoTaskMemFree(system32_path);
+    }    
+    static Direct3DCreate9_t original_Direct3DCreate9 = (Direct3DCreate9_t) GetProcAddress(d3d9, "Direct3DCreate9");
+
+
+    return original_Direct3DCreate9(SDKVersion);
 }

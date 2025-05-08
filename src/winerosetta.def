@@ -1,0 +1,3 @@
+LIBRARY WINEROSETTA.DLL
+EXPORTS
+    Direct3DCreate9=export_Direct3DCreate9
