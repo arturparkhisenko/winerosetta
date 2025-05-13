@@ -68,15 +68,20 @@ BOOL WINAPI DllMain(HMODULE module, DWORD reason, LPVOID reserved) {
 
 using Direct3DCreate9_t = decltype(&Direct3DCreate9);
 extern "C" auto WINAPI export_Direct3DCreate9(UINT SDKVersion) -> IDirect3D9* {
-    HMODULE d3d9;
-    PWSTR system32_path = nullptr;
-    HRESULT hr = SHGetKnownFolderPath(FOLDERID_System, 0, NULL, &system32_path);
-    if (SUCCEEDED(hr)) {
-        char d3d9_path[MAX_PATH];
-        sprintf(d3d9_path, "%S\\d3d9.dll", system32_path);
-        d3d9 = LoadLibraryEx(d3d9_path, 0, LOAD_WITH_ALTERED_SEARCH_PATH);
-        CoTaskMemFree(system32_path);
-    }    
+    HMODULE d3d9 = nullptr;
+
+    d3d9 = LoadLibrary("d9vk.dll");
+
+    if (!d3d9) {        
+        PWSTR system32_path = nullptr;
+        HRESULT hr = SHGetKnownFolderPath(FOLDERID_System, 0, NULL, &system32_path);
+        if (SUCCEEDED(hr)) {
+            char d3d9_path[MAX_PATH];
+            sprintf(d3d9_path, "%S\\d3d9.dll", system32_path);
+            d3d9 = LoadLibraryEx(d3d9_path, 0, LOAD_WITH_ALTERED_SEARCH_PATH);
+            CoTaskMemFree(system32_path);
+        }    
+    }
     static Direct3DCreate9_t original_Direct3DCreate9 = (Direct3DCreate9_t) GetProcAddress(d3d9, "Direct3DCreate9");
 
 
